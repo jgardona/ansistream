@@ -1,0 +1,22 @@
+[package]
+name = "ansistream"
+version = "0.1.0"
+edition = "2021"
+
+[[example]]
+name = "test_4bit_color"
+path = "examples/test_4bit_color.rs"
+
+[[example]]
+name = "color_loop"
+path = "examples/color_loop.rs"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+
+[profile.release]
+strip = true
+lto = "thin"
+opt-level = "z"
+panic = "abort"
