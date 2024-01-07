@@ -1,4 +1,13 @@
+use std::io::{Read, Seek, SeekFrom, Write};
+
 use ansistream::*;
+
+fn flush<T: Read + Seek, W: Write>(reader: &mut T, writer: &mut W) -> std::io::Result<()> {
+    reader.seek(SeekFrom::Start(0))?;
+    std::io::copy(reader, writer)?;
+    reader.seek(SeekFrom::Start(0))?;
+    Ok(())
+}
 
 fn main() -> std::io::Result<()> {
     let mut astream = ansistream::AnsiEscapeStream::default();
@@ -49,27 +58,18 @@ fn main() -> std::io::Result<()> {
     astream.write_string("printing background colors\n\n")?;
     astream.write_text_fc(FCBLACK, "")?;
 
-    astream.write_text_bc(BCBLACK, "background black text color")?;
-    astream.write_text_bc(BCRED, "background red text color")?;
-    astream.write_text_bc(BCGREEN, "background green text color")?;
-    astream.write_text_bc(BCBROWN, "background brown text color")?;
-    astream.write_text_bc(BCBLUE, "background blue text color")?;
-    astream.write_text_bc(BCMAGENTA, "background magenta text color")?;
-    astream.write_text_bc(BCCYAN, "background cyan text color")?;
-    astream.write_text_bc(BCDARKGRAY, "background dark gray text color")?;
-    astream.write_text_bc(BCLIGHTGRAY, "background light gray text color")?;
-    astream.write_text_bc(BCLIGHTRED, "background light red text color")?;
-    astream.write_text_bc(BCLIGHTGREEN, "background light green text color")?;
-    astream.write_text_bc(BCYELLOW, "background yellow text color")?;
-    astream.write_text_bc(BCLIGHTBLUE, "background light blue text color")?;
-    astream.write_text_bc(BCLIGHTMAGENTA, "background light magenta text color")?;
-    astream.write_text_bc(BCLIGHTCYAN, "background light cyan text color")?;
-    astream.write_text_bc(BCWHITE, "background white text color")?;
+    for i in 40..=47 {
+        astream.write_text_color(FCLIGHTGRAY, i, &format!("   {i}"))?;
+    }
+    writeln!(&mut *astream)?;
+    for i in 100..=107 {
+        astream.write_text_color(FCLIGHTGRAY, i, &format!("  {i}"))?;
+    }
 
     let mut stdout = std::io::stdout().lock();
     astream.reset();
 
-    std::io::copy(&mut *astream, &mut stdout)?;
+    flush(&mut *astream, &mut stdout)?;
 
     Ok(())
 }
