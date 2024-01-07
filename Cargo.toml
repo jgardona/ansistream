@@ -8,8 +8,8 @@ name = "test_4bit_color"
 path = "examples/test_4bit_color.rs"
 
 [[example]]
-name = "color_loop"
-path = "examples/color_loop.rs"
+name = "256color"
+path = "examples/256color.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

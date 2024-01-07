@@ -1,5 +1,32 @@
 //! # Ansi Stream
-//! Write blazingly fast, free allocation ansi scape codes to a buffer.
+//! Write blazingly fast, free allocation ansi escape codes to a buffer, and flushes them all to any output
+//! stream. Supports 8/16 colors, 256 colors, RGB color rendering output.
+//!
+//! ## ANSI Escape Codes for Terminal Graphics
+//! The ANSI escape code standard, formally adopted as ISO/IEC 6429, defines a series of control sequences.
+//! Each control sequence begins with a **Control Sequence Introducer** (CSI), defined as a scape character
+//! followed immediately by a bracket: **ESC[**. In particular, a CSI followed by a certain number of "parameter bytes"
+//! (ASCII 0-9:; <=>?) then the letter m forms a control sequence known as **Select Graphic Rendition** (SGR). If no
+//! parameter bytes are explicitly given, then it is assumed to be 0. SGR parameters can be chained together with a semicolon **;**
+//! as **delimiter**.
+//!
+//! Some common SGR parameters are shown below.
+//!
+//! |Parameter | Effect|
+//! |- | -|
+//! |0 | reset all SGR effects to their default|
+//! |1 | bold or increased intensity|
+//! |2 | faint or decreased insensity|
+//! |4 | singly underlined|
+//! |5 | slow blink|
+//! |30-37 | foreground color (3/4 bit)|
+//! |38;5;x | foreground color (256 colors, non-standard)|
+//! |38;2;r;g;b | foreground color (RGB, non-standard)|
+//! |40-47 | background color (8 colors)|
+//! |48;5;x | background color (256 colors, non-standard)|
+//! |48;2;r;g;b | background color (RGB, non-standard)|
+//! |90-97 | bright foreground color (non-standard)|
+//! |100-107 | bright background color (non-standard)|
 
 use std::{
     io::{self, Cursor, Write},
@@ -149,6 +176,24 @@ impl AnsiEscapeStream {
     ) -> io::Result<()> {
         self.buffer.write(&[ESC])?;
         write!(self.buffer, "[{foreground};{background}m{text}")?;
+        if !text.is_empty() {
+            self.reset_all_attributes()?;
+        }
+        Ok(())
+    }
+
+    pub fn write_text_fc256(&mut self, color: u16, text: &str) -> io::Result<()> {
+        self.buffer.write(&[ESC])?;
+        write!(self.buffer, "[{FCRICHCOLORS};5;{color}m{text}")?;
+        if !text.is_empty() {
+            self.reset_all_attributes()?;
+        }
+        Ok(())
+    }
+
+    pub fn write_text_bc256(&mut self, color: u16, text: &str) -> io::Result<()> {
+        self.buffer.write(&[ESC])?;
+        write!(self.buffer, "[{BCRICHCOLORS};5;{color}m")?;
         if !text.is_empty() {
             self.reset_all_attributes()?;
         }
@@ -332,6 +377,28 @@ mod tests {
             &[
                 0x1b, 0x5b, 0x33, 0x35, 0x3b, 0x31, 0x30, 0x30, 0x6d, 0x30, 0x31, 0x32, 0x1b, 0x5b,
                 0x30, 0x6d
+            ],
+            astream.get_ref().as_slice()
+        );
+    }
+
+    #[test]
+    fn test_write_text_fc256_function() {
+        // test not reseting scenario
+        let mut astream = AnsiEscapeStream::default();
+        astream.write_text_fc256(FCBLUE, "").unwrap();
+        assert_eq!(
+            &[0x1b, 0x5b, 0x33, 0x38, 0x3b, 0x35, 0x3b, 0x33, 0x34, 0x6d],
+            astream.get_ref().as_slice()
+        );
+        astream.reset();
+
+        // test reseting scenario
+        astream.write_text_fc256(FCBLUE, "012").unwrap();
+        assert_eq!(
+            &[
+                0x1b, 0x5b, 0x33, 0x38, 0x3b, 0x35, 0x3b, 0x33, 0x34, 0x6d, 0x30, 0x31, 0x32, 0x1b,
+                0x5b, 0x30, 0x6d
             ],
             astream.get_ref().as_slice()
         );
