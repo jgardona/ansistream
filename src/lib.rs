@@ -97,7 +97,7 @@ impl AnsiEscapeStream {
     }
 
     pub fn reset_all_attributes(&mut self) -> io::Result<()> {
-        self.buffer.write(&[ESC])?;
+        self.buffer.write_all(&[ESC])?;
         write!(self.buffer, "[0m")?;
         Ok(())
     }
@@ -117,7 +117,7 @@ impl AnsiEscapeStream {
     }
 
     pub fn write_attribute(&mut self, attr: u16) -> io::Result<()> {
-        self.buffer.write(&[ESC])?;
+        self.buffer.write_all(&[ESC])?;
         write!(self.buffer, "[{attr}m")?;
         Ok(())
     }
@@ -174,7 +174,7 @@ impl AnsiEscapeStream {
         background: u16,
         text: &str,
     ) -> io::Result<()> {
-        self.buffer.write(&[ESC])?;
+        self.buffer.write_all(&[ESC])?;
         write!(self.buffer, "[{foreground};{background}m{text}")?;
         if !text.is_empty() {
             self.reset_all_attributes()?;
@@ -183,7 +183,7 @@ impl AnsiEscapeStream {
     }
 
     pub fn write_text_fc256(&mut self, color: u16, text: &str) -> io::Result<()> {
-        self.buffer.write(&[ESC])?;
+        self.buffer.write_all(&[ESC])?;
         write!(self.buffer, "[{FCRICHCOLORS};5;{color}m{text}")?;
         if !text.is_empty() {
             self.reset_all_attributes()?;
@@ -192,7 +192,7 @@ impl AnsiEscapeStream {
     }
 
     pub fn write_text_bc256(&mut self, color: u16, text: &str) -> io::Result<()> {
-        self.buffer.write(&[ESC])?;
+        self.buffer.write_all(&[ESC])?;
         write!(self.buffer, "[{BCRICHCOLORS};5;{color}m")?;
         if !text.is_empty() {
             self.reset_all_attributes()?;

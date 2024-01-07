@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [[example]]
-name = "test_4bit_color"
-path = "examples/test_4bit_color.rs"
+name = "16color"
+path = "examples/16color.rs"
 
 [[example]]
 name = "256color"
