@@ -1,5 +1,5 @@
 //! # Ansi Stream
-//!
+//! Write blazingly fast, free allocation ansi scape codes to a buffer.
 
 use std::{
     io::{self, Cursor, Write},
@@ -8,7 +8,7 @@ use std::{
 
 /// ASCII Escape.
 const ESC: u8 = 0x1b;
-// foreground colors
+/// Foreground colors.
 pub const FCBLACK: u16 = 30;
 pub const FCRED: u16 = 31;
 pub const FCGREEN: u16 = 32;
@@ -28,7 +28,7 @@ pub const FCLIGHTMAGENTA: u16 = 95;
 pub const FCLIGHTCYAN: u16 = 96;
 pub const FCWHITE: u16 = 97;
 
-// background colors
+/// Background colors.
 pub const BCBLACK: u16 = 40;
 pub const BCRED: u16 = 41;
 pub const BCGREEN: u16 = 42;
@@ -60,78 +60,99 @@ impl AnsiEscapeStream {
         }
     }
 
+    pub fn clear(&mut self) {
+        self.buffer.set_position(0);
+        self.buffer.get_mut().clear();
+    }
+
     pub fn reset(&mut self) {
         self.buffer.set_position(0);
     }
 
-    pub fn reset_attribute(&mut self, attr: u16) -> io::Result<usize> {
-        let written = match attr {
+    pub fn reset_all_attributes(&mut self) -> io::Result<()> {
+        self.buffer.write(&[ESC])?;
+        write!(self.buffer, "[0m")?;
+        Ok(())
+    }
+
+    pub fn reset_attribute(&mut self, attr: u16) -> io::Result<()> {
+        match attr {
             30..=37 | 90..=97 => self.write_attribute(FCDEFAULT)?,
             40..=47 | 100..=107 => self.write_attribute(BCDEFAULT)?,
             _ => panic!("code not implemented"),
         };
 
-        Ok(written)
+        Ok(())
     }
 
     pub fn write(&mut self, buffer: &[u8]) -> io::Result<usize> {
         self.buffer.write(buffer)
     }
 
-    pub fn write_attribute(&mut self, attr: u16) -> io::Result<usize> {
-        let written = self.buffer.write(&[ESC])?;
+    pub fn write_attribute(&mut self, attr: u16) -> io::Result<()> {
+        self.buffer.write(&[ESC])?;
         write!(self.buffer, "[{attr}m")?;
-        Ok(written)
+        Ok(())
     }
 
     pub fn write_string(&mut self, text: &str) -> io::Result<usize> {
         self.buffer.write(text.as_bytes())
     }
 
-    pub fn write_text_fc(&mut self, color: u16, text: &str) -> io::Result<usize> {
-        let written = match color {
+    pub fn write_text_fc(&mut self, color: u16, text: &str) -> io::Result<()> {
+        match color {
             40..=47 | 100..=107 => {
-                let mut w = self.write_attribute(color - 10)?;
+                self.write_attribute(color - 10)?;
                 if !text.is_empty() {
-                    w += self.write_string(text)?;
-                    w += self.reset_attribute(color - 10)?;
+                    self.write_string(text)?;
+                    self.reset_attribute(color - 10)?;
                 }
-                w
             }
             _ => {
-                let mut w = self.write_attribute(color)?;
+                self.write_attribute(color)?;
                 if !text.is_empty() {
-                    w += self.write_string(text)?;
-                    w += self.reset_attribute(color)?;
+                    self.write_string(text)?;
+                    self.reset_attribute(color)?;
                 }
-                w
             }
         };
 
-        Ok(written)
+        Ok(())
     }
 
-    pub fn write_text_bc(&mut self, color: u16, text: &str) -> io::Result<usize> {
-        let written = match color {
+    pub fn write_text_bc(&mut self, color: u16, text: &str) -> io::Result<()> {
+        match color {
             30..=37 | 90..=97 => {
-                let mut w = self.write_attribute(color + 10)?;
+                self.write_attribute(color + 10)?;
                 if !text.is_empty() {
-                    w += self.write_string(text)?;
-                    w += self.reset_attribute(color + 10)?;
+                    self.write_string(text)?;
+                    self.reset_attribute(color + 10)?;
                 }
-                w
             }
             _ => {
-                let mut w = self.write_attribute(color)?;
+                self.write_attribute(color)?;
                 if !text.is_empty() {
-                    w += self.write_string(text)?;
-                    w += self.reset_attribute(color)?;
+                    self.write_string(text)?;
+                    self.reset_attribute(color)?;
                 }
-                w
             }
         };
 
-        Ok(written)
+        Ok(())
+    }
+
+    pub fn write_text_color(
+        &mut self,
+        foreground: u16,
+        background: u16,
+        text: &str,
+    ) -> io::Result<()> {
+        self.buffer.write(&[ESC])?;
+        write!(self.buffer, "[{foreground};{background}m{text}")?;
+        if !text.is_empty() {
+            self.reset_all_attributes()?;
+        }
+        Ok(())
     }
 }
 
@@ -223,9 +244,13 @@ mod tests {
         astream.write_attribute(FCRED).unwrap();
         let mut output = Cursor::new(Vec::<u8>::new());
         astream.reset();
-        let buffer: &mut Cursor<Vec<u8>> = &mut astream;
-        std::io::copy(buffer, &mut output).unwrap();
+        std::io::copy(&mut *astream, &mut output).unwrap();
         assert_eq!(&[0x1b, 0x5b, 0x33, 0x31, 0x6d], output.get_ref().as_slice());
+
+        // test writing with writln! macro
+        astream.clear();
+        writeln!(&mut *astream).unwrap();
+        assert_eq!(&[0x0a], astream.get_ref().as_slice());
     }
 
     #[test]
@@ -285,6 +310,30 @@ mod tests {
         assert_eq!(
             &[0x1b, 0x5b, 0x31, 0x30, 0x33, 0x6d],
             astream.get_ref().as_slice()
-        )       
+        )
+    }
+
+    #[test]
+    fn test_write_text_color_function() {
+        // test not reset scenario
+        let mut astream = AnsiEscapeStream::default();
+        astream.write_text_color(FCMAGENTA, BCDARKGRAY, "").unwrap();
+        assert_eq!(
+            &[0x1b, 0x5b, 0x33, 0x35, 0x3b, 0x31, 0x30, 0x30, 0x6d],
+            astream.get_ref().as_slice()
+        );
+
+        astream.reset();
+        // test reset all scenario
+        astream
+            .write_text_color(FCMAGENTA, BCDARKGRAY, "012")
+            .unwrap();
+        assert_eq!(
+            &[
+                0x1b, 0x5b, 0x33, 0x35, 0x3b, 0x31, 0x30, 0x30, 0x6d, 0x30, 0x31, 0x32, 0x1b, 0x5b,
+                0x30, 0x6d
+            ],
+            astream.get_ref().as_slice()
+        );
     }
 }

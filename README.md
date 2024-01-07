@@ -1,2 +1,2 @@
-# ansiescapebuffer
-A buffer to write strings and ansi escape codes without allocations.
+# Ansi Stream
+Write blazingly fast, free allocation ansi scape codes to a buffer.
