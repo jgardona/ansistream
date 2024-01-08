@@ -75,33 +75,46 @@ pub const BCLIGHTMAGENTA: u16 = 105;
 pub const BCLIGHTCYAN: u16 = 106;
 pub const BCWHITE: u16 = 107;
 
+
+/// Data structure used to do fast ansi escape write operations.
+/// It implements many methods and traits which makes easier to format text.
+/// An internal buffer can be preallocated, which avoids allocation using write operations.
 #[derive(Debug, Default)]
 pub struct AnsiEscapeStream {
     buffer: Cursor<Vec<u8>>,
 }
 
 impl AnsiEscapeStream {
+
+    /// Initializes an AnsiEscapeStream.\
+    /// capacity is a unsigned number used to preallocate the internal buffer.
     pub fn new(capacity: usize) -> Self {
         Self {
             buffer: Cursor::new(Vec::<u8>::with_capacity(capacity)),
         }
     }
 
+    /// Clear the internal buffer.\
+    /// The buffer position is updated to 0, and all data is cleared. The capacity remains the same.
     pub fn clear(&mut self) {
         self.buffer.set_position(0);
         self.buffer.get_mut().clear();
     }
 
+    /// Set the internal buffer position to 0.
     pub fn reset(&mut self) {
         self.buffer.set_position(0);
     }
 
+    /// Reset all ansi escape code attributes before this buffer position using ESC[0m.
     pub fn reset_all_attributes(&mut self) -> io::Result<()> {
         self.buffer.write_all(&[ESC])?;
         write!(self.buffer, "[0m")?;
         Ok(())
     }
 
+    /// Reset an attribute of type. If the attribute is a foreground color, then
+    /// reset it to the default foreground color.
     pub fn reset_attribute(&mut self, attr: u16) -> io::Result<()> {
         match attr {
             30..=37 | 90..=97 => self.write_attribute(FCDEFAULT)?,
@@ -112,20 +125,25 @@ impl AnsiEscapeStream {
         Ok(())
     }
 
+    /// Write a byte slice to stream.
     pub fn write(&mut self, buffer: &[u8]) -> io::Result<usize> {
         self.buffer.write(buffer)
     }
 
+    /// Write an attribute to stream. 
     pub fn write_attribute(&mut self, attr: u16) -> io::Result<()> {
         self.buffer.write_all(&[ESC])?;
         write!(self.buffer, "[{attr}m")?;
         Ok(())
     }
 
+    /// Write a string to stream.
     pub fn write_string(&mut self, text: &str) -> io::Result<usize> {
         self.buffer.write(text.as_bytes())
     }
 
+    /// Write a 16 foreground color text to stream. The attribute is reseted in the end of the text.
+    /// If the text is empty, the reset operation will not be performed.
     pub fn write_text_fc(&mut self, color: u16, text: &str) -> io::Result<()> {
         match color {
             40..=47 | 100..=107 => {
@@ -147,6 +165,8 @@ impl AnsiEscapeStream {
         Ok(())
     }
 
+    /// Write a 16 background color text to stream. The attribute is reseted in the end of the text.
+    /// If the text is empty, the reset operation will not be performed.
     pub fn write_text_bc(&mut self, color: u16, text: &str) -> io::Result<()> {
         match color {
             30..=37 | 90..=97 => {
@@ -168,6 +188,8 @@ impl AnsiEscapeStream {
         Ok(())
     }
 
+    /// Write 16 foregournd and background color text to stream. If the text is
+    /// empty, the reset operation will not be performed.
     pub fn write_text_color(
         &mut self,
         foreground: u16,
@@ -182,6 +204,8 @@ impl AnsiEscapeStream {
         Ok(())
     }
 
+    /// Write 256 foreground color text to the stream. If the text is empty, the
+    /// reset operation will not be performed.
     pub fn write_text_fc256(&mut self, color: u16, text: &str) -> io::Result<()> {
         self.buffer.write_all(&[ESC])?;
         write!(self.buffer, "[{FCRICHCOLORS};5;{color}m{text}")?;
@@ -191,6 +215,8 @@ impl AnsiEscapeStream {
         Ok(())
     }
 
+    /// Write 256 background color text to the stream. If the text is empty, the
+    /// reset operation will not be performed.
     pub fn write_text_bc256(&mut self, color: u16, text: &str) -> io::Result<()> {
         self.buffer.write_all(&[ESC])?;
         write!(self.buffer, "[{BCRICHCOLORS};5;{color}m{text}")?;
@@ -200,6 +226,8 @@ impl AnsiEscapeStream {
         Ok(())
     }
 
+    /// Write RGB foreground color text to the stream. If the text is empty, the
+    /// reset operation will not be performed.
     pub fn write_text_fcrgb(&mut self, r: u16, g: u16, b: u16, text: &str) -> io::Result<()> {
         self.buffer.write_all(&[ESC])?;
         write!(self.buffer, "[{FCRICHCOLORS};2;{r};{g};{b}m{text}")?;
@@ -209,6 +237,8 @@ impl AnsiEscapeStream {
         Ok(())
     }
 
+    /// Write RGB background color text to the stream. If the text is empty, the
+    /// reset operation will not be performed.
     pub fn write_text_bcrgb(&mut self, r: u16, g: u16, b: u16, text: &str) -> io::Result<()> {
         self.buffer.write_all(&[ESC])?;
         write!(self.buffer, "[{BCRICHCOLORS};2;{r};{g};{b}m{text}")?;

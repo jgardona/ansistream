@@ -1,7 +1,13 @@
 [package]
 name = "ansistream"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
+repository = "https://github.com/jcbritobr/ansistream"
+homepage = "https://github.com/jcbritobr/ansistream"
+description = "Write blazingly fast, free allocation ansi escape codes to a buffer, and flushes them all to any output."
+license = "MIT"
+categories = ["development-tools"]
+keywords = ["ansi-escape-code", "terminal"]
 
 [[example]]
 name = "16color"
