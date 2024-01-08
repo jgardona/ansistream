@@ -1,4 +1,4 @@
-use std::io::{self, Read, Seek};
+use std::io::{self, Read, Seek, Write};
 
 fn flush_stdout<W: Read + Seek>(reader: &mut W) -> io::Result<()> {
     let mut stdout = io::stdout().lock();
@@ -14,25 +14,25 @@ fn main() -> io::Result<()> {
 
     astream.write_text_fcrgb(50, 50, 50, "")?;
     astream.write_text_bcrgb(139, 60, 60, " #8b3c3c          ")?;
-    astream.write(&[13, 10])?;
+    writeln!(&mut *astream)?;
     astream.write_text_bcrgb(189, 90, 92, " #bd5a5c          ")?;
-    astream.write(&[13, 10])?;
+    writeln!(&mut *astream)?;
     astream.write_text_bcrgb(64, 80, 103, " #405067          ")?;
-    astream.write(&[13, 10])?;
+    writeln!(&mut *astream)?;
     astream.write_text_bcrgb(98, 112, 121, " #627079          ")?;
-    astream.write(&[13, 10])?;
+    writeln!(&mut *astream)?;
     astream.write_text_bcrgb(156, 118, 53, " #9c7635          ")?;
-    astream.write(&[13, 10])?;
+    writeln!(&mut *astream)?;
     astream.write_text_bcrgb(211, 189, 152, " #d3bd98          ")?;
-    astream.write(&[13, 10])?;
+    writeln!(&mut *astream)?;
     astream.write_text_bcrgb(130, 101, 103, " #826567          ")?;
-    astream.write(&[13, 10])?;
+    writeln!(&mut *astream)?;
     astream.write_text_bcrgb(169, 139, 139, " #a98b8b          ")?;
-    astream.write(&[13, 10])?;
+    writeln!(&mut *astream)?;
     astream.write_text_bcrgb(255, 180, 1, " #ffb401          ")?;
-    astream.write(&[13, 10])?;
+    writeln!(&mut *astream)?;
     astream.write_text_bcrgb(255, 217, 115, " #ffd973          ")?;
-    astream.write(&[13, 10])?;
+    writeln!(&mut *astream)?;
 
     flush_stdout(&mut *astream)?;
     Ok(())
