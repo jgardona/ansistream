@@ -186,16 +186,34 @@ impl AnsiEscapeStream {
         self.buffer.write_all(&[ESC])?;
         write!(self.buffer, "[{FCRICHCOLORS};5;{color}m{text}")?;
         if !text.is_empty() {
-            self.reset_all_attributes()?;
+            self.reset_attribute(color)?;
         }
         Ok(())
     }
 
     pub fn write_text_bc256(&mut self, color: u16, text: &str) -> io::Result<()> {
         self.buffer.write_all(&[ESC])?;
-        write!(self.buffer, "[{BCRICHCOLORS};5;{color}m")?;
+        write!(self.buffer, "[{BCRICHCOLORS};5;{color}m{text}")?;
         if !text.is_empty() {
-            self.reset_all_attributes()?;
+            self.reset_attribute(color)?;
+        }
+        Ok(())
+    }
+
+    pub fn write_text_fcrgb(&mut self, r: u16, g: u16, b: u16, text: &str) -> io::Result<()> {
+        self.buffer.write_all(&[ESC])?;
+        write!(self.buffer, "[{FCRICHCOLORS};2;{r};{g};{b}m{text}")?;
+        if !text.is_empty() {
+            self.reset_attribute(FCBLACK)?;
+        }
+        Ok(())
+    }
+
+    pub fn write_text_bcrgb(&mut self, r: u16, g: u16, b: u16, text: &str) -> io::Result<()> {
+        self.buffer.write_all(&[ESC])?;
+        write!(self.buffer, "[{BCRICHCOLORS};2;{r};{g};{b}m{text}")?;
+        if !text.is_empty() {
+            self.reset_attribute(BCBLACK)?;
         }
         Ok(())
     }
@@ -398,7 +416,79 @@ mod tests {
         assert_eq!(
             &[
                 0x1b, 0x5b, 0x33, 0x38, 0x3b, 0x35, 0x3b, 0x33, 0x34, 0x6d, 0x30, 0x31, 0x32, 0x1b,
-                0x5b, 0x30, 0x6d
+                0x5b, 0x33, 0x39, 0x6d
+            ],
+            astream.get_ref().as_slice()
+        );
+    }
+
+    #[test]
+    fn test_write_text_bc256_function() {
+        // test not reseting scenario
+        let mut astream = AnsiEscapeStream::default();
+        astream.write_text_bc256(BCBLUE, "").unwrap();
+        assert_eq!(
+            &[0x1b, 0x5b, 0x34, 0x38, 0x3b, 0x35, 0x3b, 0x34, 0x34, 0x6d],
+            astream.get_ref().as_slice()
+        );
+        astream.reset();
+
+        // test reseting scenario
+        astream.write_text_bc256(BCBLUE, "012").unwrap();
+        assert_eq!(
+            &[
+                0x1b, 0x5b, 0x34, 0x38, 0x3b, 0x35, 0x3b, 0x34, 0x34, 0x6d, 0x30, 0x31, 0x32, 0x1b,
+                0x5b, 0x34, 0x39, 0x6d
+            ],
+            astream.get_ref().as_slice()
+        );
+    }
+
+    #[test]
+    fn test_write_text_fcrgb() {
+        // test not reseting scenario
+        let mut astream = AnsiEscapeStream::default();
+        astream.write_text_fcrgb(255, 255, 255, "").unwrap();
+        assert_eq!(
+            &[
+                27, 91, 0x33, 0x38, 59, 0x32, 59, 0x32, 0x35, 0x35, 59, 0x32, 0x35, 0x35, 59, 0x32,
+                0x35, 0x35, 109
+            ],
+            astream.get_ref().as_slice()
+        );
+        astream.reset();
+
+        // test reseting scenario
+        astream.write_text_fcrgb(255, 255, 255, "012").unwrap();
+        assert_eq!(
+            &[
+                27, 91, 0x33, 0x38, 59, 0x32, 59, 0x32, 0x35, 0x35, 59, 0x32, 0x35, 0x35, 59, 0x32,
+                0x35, 0x35, 109, 0x30, 0x31, 0x32, 27, 91, 0x33, 0x39, 109
+            ],
+            astream.get_ref().as_slice()
+        );
+    }
+
+    #[test]
+    fn test_write_text_ccrgb() {
+        // test not reseting scenario
+        let mut astream = AnsiEscapeStream::default();
+        astream.write_text_bcrgb(255, 255, 255, "").unwrap();
+        assert_eq!(
+            &[
+                27, 91, 0x34, 0x38, 59, 0x32, 59, 0x32, 0x35, 0x35, 59, 0x32, 0x35, 0x35, 59, 0x32,
+                0x35, 0x35, 109
+            ],
+            astream.get_ref().as_slice()
+        );
+        astream.reset();
+
+        // test reseting scenario
+        astream.write_text_bcrgb(255, 255, 255, "012").unwrap();
+        assert_eq!(
+            &[
+                27, 91, 0x34, 0x38, 59, 0x32, 59, 0x32, 0x35, 0x35, 59, 0x32, 0x35, 0x35, 59, 0x32,
+                0x35, 0x35, 109, 0x30, 0x31, 0x32, 27, 91, 0x34, 0x39, 109
             ],
             astream.get_ref().as_slice()
         );
