@@ -65,7 +65,7 @@ let mut stdout = io::stdout().lock();
 
 astream.write_string("simple text")?;
 // AnsiScapeStream impl DerefMut
-flush(&mut *astream, stdout)?;
+flush(&mut *astream, &mut stdout)?;
 ```
 
 * Writing a green foreground text to stream
@@ -102,6 +102,17 @@ Benchmark 1: .\16color.exe
 Benchmark 1: .\256color.exe
   Time (mean ± σ):      29.0 ms ±   2.7 ms    [User: 8.4 ms, System: 17.2 ms]
   Range (min … max):    25.8 ms …  40.6 ms    41 runs
+```
+
+* truecolor example
+
+![truecolor](images/truecolor.png)
+
+```
+❯ hyperfine.exe --warmup 100 '.\truecolor.exe'
+Benchmark 1: .\truecolor.exe
+  Time (mean ± σ):      28.5 ms ±   1.2 ms    [User: 7.9 ms, System: 17.8 ms]
+  Range (min … max):    26.9 ms …  32.5 ms    51 runs
 ```
 
 ## References

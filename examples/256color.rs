@@ -66,9 +66,8 @@ fn main() -> std::io::Result<()> {
         astream.write_attribute(fg)?;
         astream.write_text_bc256(ie, "")?;
         write!(&mut *astream, "  {ie:<4}")?;
+        astream.reset_all_attributes()?;
     }
-
-    astream.reset_all_attributes()?;
 
     flush(&mut *astream, &mut stdout)?;
 
