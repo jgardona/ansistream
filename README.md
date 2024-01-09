@@ -1,4 +1,21 @@
 # Ansi Stream
+
+<p align="center">
+  <a href="https://crates.io/crates/ansistream">
+    <img src="https://img.shields.io/crates/v/ansistream.svg" alt="Crates.io"/>
+  </a>
+  <a href="https://crates.io/crates/ansistream">
+    <img src="https://img.shields.io/crates/d/ansistream" alt="Crates.io Downloads"/>
+  </a>
+  <img src="https://img.shields.io/badge/rust-stable-orange" alt="Rust Stable"/>
+  <a href="https://opensource.org/licenses/MIT">
+    <img src="https://img.shields.io/crates/l/ansistream.svg" alt="License"/>
+  </a>
+  <a href="https://github.com/jgardona/ansistream/actions/workflows/rust.yml">
+    <img src="https://github.com/jgardona/ansistream/actions/workflows/rust.yml/badge.svg" alt="GitHub Actions Workflow Status"/>
+  </a>
+</p>
+
 Write blazingly fast, free allocation ansi escape codes to a buffer, and flushes them all to any output stream. Supports 8/16 colors, 256 colors, RGB color rendering output.
 
 ## ANSI Escape Codes for Terminal Graphics
