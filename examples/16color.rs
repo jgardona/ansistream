@@ -14,13 +14,12 @@ fn main() -> std::io::Result<()> {
 
     astream.write_string("Printing 16 color to stdout\n\n")?;
 
-    astream.write_text_fc(FC_BLACK, "")?;
     for i in 40..=47 {
-        astream.write_text_color(FC_LIGHT_GRAY, i, &format!("   {i}"))?;
+        astream.write_text_color_fmt(FC_LIGHT_GRAY, i, format_args!("{i:>5} "))?;
     }
     writeln!(&mut *astream)?;
     for i in 100..=107 {
-        astream.write_text_color(FC_LIGHT_GRAY, i, &format!("  {i}"))?;
+        astream.write_text_color_fmt(FC_LIGHT_GRAY, i, format_args!("{i:>5} "))?;
     }
 
     let mut stdout = std::io::stdout().lock();

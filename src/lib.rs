@@ -29,6 +29,7 @@
 //! |100-107 | bright background color (non-standard)|
 
 use std::{
+    fmt,
     io::{self, Cursor, Write},
     ops::{Deref, DerefMut},
 };
@@ -146,6 +147,8 @@ impl AnsiEscapeStream {
             TS_INVERT => self.write_attribute(TS_NO_INVERT)?,
             TS_HIDDEN => self.write_attribute(TS_NO_HIDDEN)?,
             TS_STRIKE => self.write_attribute(TS_NO_STRIKE)?,
+            FC_RICH_COLORS => self.write_attribute(FC_DEFAULT)?,
+            BC_RICH_COLORS => self.write_attribute(BC_DEFAULT)?,
             30..=37 | 90..=97 => self.write_attribute(FC_DEFAULT)?,
             40..=47 | 100..=107 => self.write_attribute(BC_DEFAULT)?,
             _ => panic!("code not implemented"),
@@ -218,7 +221,8 @@ impl AnsiEscapeStream {
     }
 
     /// Write 16 foregournd and background color text to stream. If the text is
-    /// empty, the reset operation will not be performed.
+    /// empty, the reset operation will not be performed. Only the codes from foreground
+    /// and backround color are reseted.
     pub fn write_text_color(
         &mut self,
         foreground: u16,
@@ -228,8 +232,24 @@ impl AnsiEscapeStream {
         self.buffer.write_all(&[ESC])?;
         write!(self.buffer, "[{foreground};{background}m{text}")?;
         if !text.is_empty() {
-            self.reset_all_attributes()?;
+            self.reset_attribute(foreground)?;
+            self.reset_attribute(background)?;
         }
+        Ok(())
+    }
+
+    /// Write 16 foregournd and background color formatted text to stream.
+    /// Only the codes from foreground and background are reset.
+    pub fn write_text_color_fmt(
+        &mut self,
+        foreground: u16,
+        background: u16,
+        fmt: fmt::Arguments<'_>,
+    ) -> io::Result<()> {
+        self.buffer.write_all(&[ESC])?;
+        write!(self.buffer, "[{foreground};{background}m{fmt}")?;
+        self.reset_attribute(foreground)?;
+        self.reset_attribute(background)?;
         Ok(())
     }
 
@@ -239,8 +259,17 @@ impl AnsiEscapeStream {
         self.buffer.write_all(&[ESC])?;
         write!(self.buffer, "[{FC_RICH_COLORS};5;{color}m{text}")?;
         if !text.is_empty() {
-            self.reset_attribute(color)?;
+            self.reset_attribute(FC_RICH_COLORS)?;
         }
+        Ok(())
+    }
+
+    /// Write 256 foreground color formatted text to the stream. A partial reset operation of used codes
+    /// will be performed.
+    pub fn write_text_fc256_fmt(&mut self, color: u16, fmt: fmt::Arguments<'_>) -> io::Result<()> {
+        self.buffer.write_all(&[ESC])?;
+        write!(self.buffer, "[{FC_RICH_COLORS};5;{color}m{fmt}")?;
+        self.reset_attribute(FC_RICH_COLORS)?;
         Ok(())
     }
 
@@ -250,8 +279,17 @@ impl AnsiEscapeStream {
         self.buffer.write_all(&[ESC])?;
         write!(self.buffer, "[{BC_RICH_COLORS};5;{color}m{text}")?;
         if !text.is_empty() {
-            self.reset_attribute(color)?;
+            self.reset_attribute(BC_RICH_COLORS)?;
         }
+        Ok(())
+    }
+
+    /// Write 256 background color formatted text to the stream. A partial reset operation of used codes
+    /// will be performed.
+    pub fn write_text_bc256_fmt(&mut self, color: u16, fmt: fmt::Arguments<'_>) -> io::Result<()> {
+        self.buffer.write_all(&[ESC])?;
+        write!(self.buffer, "[{BC_RICH_COLORS};5;{color}m{fmt}")?;
+        self.reset_attribute(BC_RICH_COLORS)?;
         Ok(())
     }
 
@@ -455,7 +493,7 @@ mod tests {
         assert_eq!(
             &[
                 0x1b, 0x5b, 0x33, 0x35, 0x3b, 0x31, 0x30, 0x30, 0x6d, 0x30, 0x31, 0x32, 0x1b, 0x5b,
-                0x30, 0x6d
+                0x33, 0x39, 0x6d, 0x1b, 0x5b, 0x34, 0x39, 0x6d
             ],
             astream.get_ref().as_slice()
         );
@@ -531,7 +569,7 @@ mod tests {
     }
 
     #[test]
-    fn test_write_text_ccrgb() {
+    fn test_write_text_bcrgb() {
         // test not reseting scenario
         let mut astream = AnsiEscapeStream::default();
         astream.write_text_bcrgb(255, 255, 255, "").unwrap();
@@ -550,6 +588,53 @@ mod tests {
             &[
                 27, 91, 0x34, 0x38, 59, 0x32, 59, 0x32, 0x35, 0x35, 59, 0x32, 0x35, 0x35, 59, 0x32,
                 0x35, 0x35, 109, 0x30, 0x31, 0x32, 27, 91, 0x34, 0x39, 109
+            ],
+            astream.get_ref().as_slice()
+        );
+    }
+
+    #[test]
+    fn test_write_text_color_fmt() {
+        let mut astream = AnsiEscapeStream::default();
+
+        // test reset all scenario
+        astream
+            .write_text_color_fmt(FC_MAGENTA, BC_DARK_GRAY, format_args!("012"))
+            .unwrap();
+        assert_eq!(
+            &[
+                0x1b, 0x5b, 0x33, 0x35, 0x3b, 0x31, 0x30, 0x30, 0x6d, 0x30, 0x31, 0x32, 0x1b, 0x5b,
+                0x33, 0x39, 0x6d, 0x1b, 0x5b, 0x34, 0x39, 0x6d
+            ],
+            astream.get_ref().as_slice()
+        );
+    }
+
+    #[test]
+    fn test_write_text_fc256_fmt() {
+        let mut astream = AnsiEscapeStream::default();
+
+        // test reseting scenario
+        astream.write_text_fc256_fmt(FC_BLUE, format_args!("012")).unwrap();
+        assert_eq!(
+            &[
+                0x1b, 0x5b, 0x33, 0x38, 0x3b, 0x35, 0x3b, 0x33, 0x34, 0x6d, 0x30, 0x31, 0x32, 0x1b,
+                0x5b, 0x33, 0x39, 0x6d
+            ],
+            astream.get_ref().as_slice()
+        );
+    }
+
+    #[test]
+    fn test_write_text_bc256_fmt() {
+        let mut astream = AnsiEscapeStream::default();
+
+        // test reseting scenario
+        astream.write_text_bc256_fmt(BC_BLUE, format_args!("012")).unwrap();
+        assert_eq!(
+            &[
+                0x1b, 0x5b, 0x34, 0x38, 0x3b, 0x35, 0x3b, 0x34, 0x34, 0x6d, 0x30, 0x31, 0x32, 0x1b,
+                0x5b, 0x34, 0x39, 0x6d
             ],
             astream.get_ref().as_slice()
         );

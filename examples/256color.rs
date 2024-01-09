@@ -18,17 +18,14 @@ fn main() -> std::io::Result<()> {
     astream.write_string("Printing standard and extended colors:\n\n")?;
 
     for i in 0..=7 {
-        astream.write_text_bc256(i, "")?;
-        write!(&mut *astream, " {i:<4}")?;
+        astream.write_text_bc256_fmt(i, format_args!("{i:<4}"))?;
     }
 
-    astream.reset_all_attributes()?;
     astream.write_string("   ")?;
 
     for i in 0..=7 {
         let ie = i + 8;
-        astream.write_text_bc256(ie, "")?;
-        write!(&mut *astream, " {ie:<4}")?;
+        astream.write_text_bc256_fmt(ie, format_args!("{ie:<4}"))?;
     }
 
     astream.reset_all_attributes()?;
@@ -48,8 +45,7 @@ fn main() -> std::io::Result<()> {
             }
         }
         astream.write_attribute(fg)?;
-        astream.write_text_bc256(v, "")?;
-        write!(&mut *astream, "  {v:<4}")?;
+        astream.write_text_bc256_fmt(v, format_args!("{v:<4}"))?;
     }
 
     astream.reset_all_attributes()?;
@@ -64,9 +60,7 @@ fn main() -> std::io::Result<()> {
 
         let ie = i + 232;
         astream.write_attribute(fg)?;
-        astream.write_text_bc256(ie, "")?;
-        write!(&mut *astream, "  {ie:<4}")?;
-        astream.reset_all_attributes()?;
+        astream.write_text_bc256_fmt(ie, format_args!("{ie:<4}"))?;
     }
 
     flush(&mut *astream, &mut stdout)?;
