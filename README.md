@@ -97,6 +97,16 @@ assert_eq!(
 );
 ```
 
+* Write formatted color output
+
+```rust
+let mut astream = AnsiEscapeStream::default();
+
+  for i in 100..=107 {
+      astream.write_text_color_fmt(FC_LIGHT_GRAY, i, format_args!("{i:>5} "))?;
+  }
+```
+
 ## Examples
 
 * 16color example
