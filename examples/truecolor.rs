@@ -26,7 +26,7 @@ fn main() -> io::Result<()> {
         0x5e7e4f, 0xc74223, 0x4b9d8e, 0x85cd9f, 0xa4deab, 0xc9e8c9, 0xfff7c9, 0xfff7c9, 0xfff7c9,
         0xffca3d, 0xffffff, 0xb80000, 0x8f3631, 0xb9512f, 0xc96c36, 0xaa883f, 0x3b4648, 0xfeed01,
         0xff9b0d, 0xff4732, 0xfc3f5c, 0x935ca4, 0xe2e1e9, 0xcdc9d0, 0xa5aabe, 0x5f6273, 0xf00806,
-        0x9e3740, 0xf3d99e, 0xb1b88c, 0x55887f, 0x2b2e37
+        0x9e3740, 0xf3d99e, 0xb1b88c, 0x55887f, 0x2b2e37,
     ];
 
     astream.write_string("Printing a common brazilian color palette:\n\n")?;
@@ -39,7 +39,7 @@ fn main() -> io::Result<()> {
         if idx % 10 == 0 {
             writeln!(&mut *astream)?;
         }
-        astream.write_text_fc(FC_DARK_GRAY, "")?;
+        astream.write_attribute(FC_DARK_GRAY)?;
         let (r, g, b) = hex2rgb(c);
         astream.write_text_bcrgb_fmt(r, g, b, format_args!("   {c:#06x} "))?;
     }
