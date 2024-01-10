@@ -89,7 +89,7 @@ flush(&mut *astream, &mut stdout)?;
 
 ```rust
 let mut astream = AnsiEscapeStream::default();
-astream.write_text_fc(FCGREEN, "123").unwrap();
+astream.write_text_fc_fmt(FCGREEN, format_args!("123")).unwrap();
 // asserts that fcgreen was writed and also reseted with fcdefault
 assert_eq!(
     &[0x1b, 0x5b, 0x33, 0x32, 0x6d, 0x31, 0x32, 0x33, 0x1b, 0x5b, 0x33, 0x39, 0x6d],
