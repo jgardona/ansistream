@@ -41,7 +41,7 @@ fn main() -> io::Result<()> {
         }
         astream.write_text_fc(FC_DARK_GRAY, "")?;
         let (r, g, b) = hex2rgb(c);
-        astream.write_text_bcrgb_fmt(r, g, b, format_args!("{c:#06x}"))?;
+        astream.write_text_bcrgb_fmt(r, g, b, format_args!("   {c:#06x} "))?;
     }
 
     astream.reset_all_attributes()?;

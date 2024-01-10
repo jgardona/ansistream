@@ -151,7 +151,7 @@ impl AnsiEscapeStream {
             BC_RICH_COLORS => self.write_attribute(BC_DEFAULT)?,
             30..=37 | 90..=97 => self.write_attribute(FC_DEFAULT)?,
             40..=47 | 100..=107 => self.write_attribute(BC_DEFAULT)?,
-            _ => panic!("code not implemented"),
+            _ => self.write_attribute(TS_DEFAULT)?,
         };
 
         Ok(())
@@ -299,7 +299,7 @@ impl AnsiEscapeStream {
         self.buffer.write_all(&[ESC])?;
         write!(self.buffer, "[{FC_RICH_COLORS};2;{r};{g};{b}m{text}")?;
         if !text.is_empty() {
-            self.reset_attribute(FC_BLACK)?;
+            self.reset_attribute(FC_RICH_COLORS)?;
         }
         Ok(())
     }
@@ -325,7 +325,7 @@ impl AnsiEscapeStream {
         self.buffer.write_all(&[ESC])?;
         write!(self.buffer, "[{BC_RICH_COLORS};2;{r};{g};{b}m{text}")?;
         if !text.is_empty() {
-            self.reset_attribute(BC_BLACK)?;
+            self.reset_attribute(BC_RICH_COLORS)?;
         }
         Ok(())
     }
