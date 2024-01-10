@@ -29,7 +29,7 @@
 //! |100-107 | bright background color (non-standard)|
 
 use std::{
-    fmt,
+    fmt::{self, Arguments},
     io::{self, Cursor, Write},
     ops::{Deref, DerefMut},
 };
@@ -174,46 +174,36 @@ impl AnsiEscapeStream {
         self.buffer.write(text.as_bytes())
     }
 
-    /// Write a 16 foreground color text to stream. The attribute is reseted in the end of the text.
-    /// If the text is empty, the reset operation will not be performed.
-    pub fn write_text_fc(&mut self, color: u16, text: &str) -> io::Result<()> {
+    /// Write a 16 formatted foreground color text to stream. The attribute is reseted at the end of operation.
+    pub fn write_text_fc_fmt(&mut self, color: u16, fmt: fmt::Arguments<'_>) -> io::Result<()> {
         match color {
             40..=47 | 100..=107 => {
                 self.write_attribute(color - 10)?;
-                if !text.is_empty() {
-                    self.write_string(text)?;
-                    self.reset_attribute(color - 10)?;
-                }
+                write!(self.buffer, "{fmt}")?;
+                self.reset_attribute(color - 10)?;
             }
             _ => {
                 self.write_attribute(color)?;
-                if !text.is_empty() {
-                    self.write_string(text)?;
-                    self.reset_attribute(color)?;
-                }
+                write!(self.buffer, "{fmt}")?;
+                self.reset_attribute(color)?;
             }
         };
 
         Ok(())
     }
 
-    /// Write a 16 background color text to stream. The attribute is reseted in the end of the text.
-    /// If the text is empty, the reset operation will not be performed.
-    pub fn write_text_bc(&mut self, color: u16, text: &str) -> io::Result<()> {
+    /// Write a 16 formatted background color text to stream. The attribute is reseted at the end of operation.
+    pub fn write_text_bc_fmt(&mut self, color: u16, fmt: Arguments<'_>) -> io::Result<()> {
         match color {
             30..=37 | 90..=97 => {
                 self.write_attribute(color + 10)?;
-                if !text.is_empty() {
-                    self.write_string(text)?;
-                    self.reset_attribute(color + 10)?;
-                }
+                write!(self.buffer, "{fmt}")?;
+                self.reset_attribute(color + 10)?;
             }
             _ => {
                 self.write_attribute(color)?;
-                if !text.is_empty() {
-                    self.write_string(text)?;
-                    self.reset_attribute(color)?;
-                }
+                write!(self.buffer, "{fmt}")?;
+                self.reset_attribute(color)?;
             }
         };
 
@@ -443,9 +433,11 @@ mod tests {
     }
 
     #[test]
-    fn test_write_text_fc_function() {
+    fn test_write_text_fc_fmt_function() {
         let mut astream = AnsiEscapeStream::default();
-        astream.write_text_fc(FC_GREEN, "123").unwrap();
+        astream
+            .write_text_fc_fmt(FC_GREEN, format_args!("123"))
+            .unwrap();
         // asserts that fcred was writed and also reseted with fcdefault
         assert_eq!(
             &[0x1b, 0x5b, 0x33, 0x32, 0x6d, 0x31, 0x32, 0x33, 0x1b, 0x5b, 0x33, 0x39, 0x6d],
@@ -455,27 +447,22 @@ mod tests {
         astream.reset();
         astream.get_mut().clear();
 
-        // asserts that without text argument write_text_color dont resets format
-        astream.write_text_fc(FC_YELLOW, "").unwrap();
-        assert_eq!(
-            &[0x1b, 0x5b, 0x39, 0x33, 0x6d],
-            astream.get_ref().as_slice()
-        );
-
-        astream.reset();
-
         // asserts that if we use a background color, write_text_color will convert it to foreground color
-        astream.write_text_fc(BC_YELLOW, "").unwrap();
+        astream
+            .write_text_fc_fmt(BC_YELLOW, format_args!("123"))
+            .unwrap();
         assert_eq!(
-            &[0x1b, 0x5b, 0x39, 0x33, 0x6d],
+            &[0x1b, 0x5b, 0x39, 0x33, 0x6d, 0x31, 0x32, 0x33, 0x1b, 0x5b, 0x33, 0x39, 0x6d],
             astream.get_ref().as_slice()
         )
     }
 
     #[test]
-    fn test_write_text_bc_function() {
+    fn test_write_text_bc_fmt_function() {
         let mut astream = AnsiEscapeStream::default();
-        astream.write_text_bc(BC_GREEN, "123").unwrap();
+        astream
+            .write_text_bc_fmt(BC_GREEN, format_args!("123"))
+            .unwrap();
         // asserts that bcgreen was writed and also reseted with bcdefault
         assert_eq!(
             &[0x1b, 0x5b, 0x34, 0x32, 0x6d, 0x31, 0x32, 0x33, 0x1b, 0x5b, 0x34, 0x39, 0x6d],
@@ -485,19 +472,12 @@ mod tests {
         astream.reset();
         astream.get_mut().clear();
 
-        // asserts that without text argument write_text_bc dont resets format
-        astream.write_text_bc(BC_YELLOW, "").unwrap();
-        assert_eq!(
-            &[0x1b, 0x5b, 0x31, 0x30, 0x33, 0x6d],
-            astream.get_ref().as_slice()
-        );
-
-        astream.reset();
-
         // asserts that if we use a foreground color, write_text_bc will convert it to background color
-        astream.write_text_bc(FC_YELLOW, "").unwrap();
+        astream
+            .write_text_bc_fmt(FC_YELLOW, format_args!("123"))
+            .unwrap();
         assert_eq!(
-            &[0x1b, 0x5b, 0x31, 0x30, 0x33, 0x6d],
+            &[0x1b, 0x5b, 0x31, 0x30, 0x33, 0x6d, 0x31, 0x32, 0x33, 0x1b, 0x5b, 0x34, 0x39, 0x6d],
             astream.get_ref().as_slice()
         )
     }
@@ -695,7 +675,9 @@ mod tests {
         let mut astream = AnsiEscapeStream::default();
 
         // test reseting scenario
-        astream.write_text_bcrgb_fmt(255, 255, 255, format_args!("012")).unwrap();
+        astream
+            .write_text_bcrgb_fmt(255, 255, 255, format_args!("012"))
+            .unwrap();
         assert_eq!(
             &[
                 27, 91, 0x34, 0x38, 59, 0x32, 59, 0x32, 0x35, 0x35, 59, 0x32, 0x35, 0x35, 59, 0x32,

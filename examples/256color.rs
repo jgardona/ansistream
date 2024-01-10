@@ -58,7 +58,7 @@ fn main() -> std::io::Result<()> {
         }
 
         let ie = i + 232;
-        astream.write_text_fc(fg, "")?;
+        astream.write_attribute(fg)?;
         astream.write_text_bc256_fmt(ie, format_args!("{ie:<4}"))?;
     }
     flush(&mut *astream, &mut stdout)?;
