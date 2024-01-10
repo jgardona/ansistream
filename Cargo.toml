@@ -25,6 +25,10 @@ path = "examples/truecolor.rs"
 name = "styles"
 path = "examples/styles.rs"
 
+[[example]]
+name = "poetry"
+path = "examples/poetry.rs"
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
