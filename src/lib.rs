@@ -304,6 +304,21 @@ impl AnsiEscapeStream {
         Ok(())
     }
 
+    /// Write RGB formatted foreground color text to the stream. A partial reset operation
+    /// is performed.
+    pub fn write_text_fcrgb_fmt(
+        &mut self,
+        r: u16,
+        g: u16,
+        b: u16,
+        fmt: fmt::Arguments<'_>,
+    ) -> io::Result<()> {
+        self.buffer.write_all(&[ESC])?;
+        write!(self.buffer, "[{FC_RICH_COLORS};2;{r};{g};{b}m{fmt}")?;
+        self.reset_attribute(FC_RICH_COLORS)?;
+        Ok(())
+    }
+
     /// Write RGB background color text to the stream. If the text is empty, the
     /// reset operation will not be performed.
     pub fn write_text_bcrgb(&mut self, r: u16, g: u16, b: u16, text: &str) -> io::Result<()> {
@@ -312,6 +327,20 @@ impl AnsiEscapeStream {
         if !text.is_empty() {
             self.reset_attribute(BC_BLACK)?;
         }
+        Ok(())
+    }
+
+    /// Write formatted RGB background color text to the stream. A partial reset operation is performed.
+    pub fn write_text_bcrgb_fmt(
+        &mut self,
+        r: u16,
+        g: u16,
+        b: u16,
+        fmt: fmt::Arguments<'_>,
+    ) -> io::Result<()> {
+        self.buffer.write_all(&[ESC])?;
+        write!(self.buffer, "[{BC_RICH_COLORS};2;{r};{g};{b}m{fmt}")?;
+        self.reset_attribute(BC_RICH_COLORS)?;
         Ok(())
     }
 }
@@ -615,7 +644,9 @@ mod tests {
         let mut astream = AnsiEscapeStream::default();
 
         // test reseting scenario
-        astream.write_text_fc256_fmt(FC_BLUE, format_args!("012")).unwrap();
+        astream
+            .write_text_fc256_fmt(FC_BLUE, format_args!("012"))
+            .unwrap();
         assert_eq!(
             &[
                 0x1b, 0x5b, 0x33, 0x38, 0x3b, 0x35, 0x3b, 0x33, 0x34, 0x6d, 0x30, 0x31, 0x32, 0x1b,
@@ -630,11 +661,45 @@ mod tests {
         let mut astream = AnsiEscapeStream::default();
 
         // test reseting scenario
-        astream.write_text_bc256_fmt(BC_BLUE, format_args!("012")).unwrap();
+        astream
+            .write_text_bc256_fmt(BC_BLUE, format_args!("012"))
+            .unwrap();
         assert_eq!(
             &[
                 0x1b, 0x5b, 0x34, 0x38, 0x3b, 0x35, 0x3b, 0x34, 0x34, 0x6d, 0x30, 0x31, 0x32, 0x1b,
                 0x5b, 0x34, 0x39, 0x6d
+            ],
+            astream.get_ref().as_slice()
+        );
+    }
+
+    #[test]
+    fn test_write_text_fcrgb_fmt() {
+        let mut astream = AnsiEscapeStream::default();
+
+        // test reseting scenario
+        astream
+            .write_text_fcrgb_fmt(255, 255, 255, format_args!("012"))
+            .unwrap();
+        assert_eq!(
+            &[
+                27, 91, 0x33, 0x38, 59, 0x32, 59, 0x32, 0x35, 0x35, 59, 0x32, 0x35, 0x35, 59, 0x32,
+                0x35, 0x35, 109, 0x30, 0x31, 0x32, 27, 91, 0x33, 0x39, 109
+            ],
+            astream.get_ref().as_slice()
+        );
+    }
+
+    #[test]
+    fn test_write_text_bcrgb_fmt() {
+        let mut astream = AnsiEscapeStream::default();
+
+        // test reseting scenario
+        astream.write_text_bcrgb_fmt(255, 255, 255, format_args!("012")).unwrap();
+        assert_eq!(
+            &[
+                27, 91, 0x34, 0x38, 59, 0x32, 59, 0x32, 0x35, 0x35, 59, 0x32, 0x35, 0x35, 59, 0x32,
+                0x35, 0x35, 109, 0x30, 0x31, 0x32, 27, 91, 0x34, 0x39, 109
             ],
             astream.get_ref().as_slice()
         );

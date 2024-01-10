@@ -1,6 +1,6 @@
 use std::io::{self, Read, Seek, Write};
 
-use ansistream::{BC_BLACK, FC_DARK_GRAY};
+use ansistream::FC_DARK_GRAY;
 
 fn flush_stdout<W: Read + Seek>(reader: &mut W) -> io::Result<()> {
     let mut stdout = io::stdout().lock();
@@ -33,18 +33,15 @@ fn main() -> io::Result<()> {
 
     for (idx, &c) in palettes.iter().enumerate() {
         if idx % 5 == 0 {
-            astream.reset_attribute(BC_BLACK)?;
             astream.write_string("\t")?;
         }
 
         if idx % 10 == 0 {
-            astream.reset_attribute(BC_BLACK)?;
             writeln!(&mut *astream)?;
         }
         astream.write_text_fc(FC_DARK_GRAY, "")?;
         let (r, g, b) = hex2rgb(c);
-        astream.write_text_bcrgb(r, g, b, "")?;
-        write!(&mut *astream, "   {c:#06x}")?;
+        astream.write_text_bcrgb_fmt(r, g, b, format_args!("{c:#06x}"))?;
     }
 
     astream.reset_all_attributes()?;
