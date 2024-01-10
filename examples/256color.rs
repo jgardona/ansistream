@@ -3,7 +3,7 @@ use std::{
     io::{Read, Seek},
 };
 
-use ansistream::{FC_WHITE, FC_BLACK};
+use ansistream::{FC_BLACK, FC_WHITE};
 
 fn flush<R: Read + Seek, W: Write>(reader: &mut R, writer: &mut W) -> std::io::Result<()> {
     reader.seek(std::io::SeekFrom::Start(0))?;
@@ -30,7 +30,6 @@ fn main() -> std::io::Result<()> {
         astream.write_text_bc256_fmt(ie, format_args!("{ie:<4}"))?;
     }
 
-    astream.reset_all_attributes()?;
     astream.write_string("\n\nPrinting 256 color:\n\n")?;
 
     let mut fg = 0;
@@ -39,7 +38,6 @@ fn main() -> std::io::Result<()> {
         if i != 0 {
             if i % 18 == 0 {
                 fg = 0;
-                astream.reset_all_attributes()?;
                 writeln!(&mut *astream)?;
             }
             if i % 36 == 0 {
@@ -50,7 +48,6 @@ fn main() -> std::io::Result<()> {
         astream.write_text_bc256_fmt(v, format_args!("{v:<4}"))?;
     }
 
-    astream.reset_all_attributes()?;
     astream.write_string("\n\nPrinting gray color:\n\n")?;
 
     for i in 0..=23 {
@@ -64,7 +61,6 @@ fn main() -> std::io::Result<()> {
         astream.write_text_fc(fg, "")?;
         astream.write_text_bc256_fmt(ie, format_args!("{ie:<4}"))?;
     }
-
     flush(&mut *astream, &mut stdout)?;
 
     Ok(())
