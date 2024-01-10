@@ -147,7 +147,7 @@ Benchmark 1: truecolor
 
 |Finnished | Type|
 |- | -|
-|x | Color Escape Codes|
+|x | Color and Style Escape Codes|
 | | Screen and Cursor Escape Codes|
 
 ## References
