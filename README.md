@@ -114,10 +114,10 @@ let mut astream = AnsiEscapeStream::default();
 ![256color](images/16color.png)
 
 ```
-❯ hyperfine.exe --warmup 100 '.\16color.exe'
-Benchmark 1: .\16color.exe
-  Time (mean ± σ):      27.2 ms ±   1.0 ms    [User: 10.7 ms, System: 16.3 ms]
-  Range (min … max):    26.1 ms …  31.9 ms    52 runs
+$ hyperfine --warmup 100 '16color'
+Benchmark 1: 16color
+  Time (mean ± σ):      10.9 ms ±   0.4 ms    [User: 5.7 ms, System: 9.3 ms]
+  Range (min … max):    10.3 ms …  12.2 ms    133 runs
 ```
 
 * 256color example
@@ -125,10 +125,10 @@ Benchmark 1: .\16color.exe
 ![256color](images/256color.png)
 
 ```
-❯ hyperfine.exe --warmup 100 '.\256color.exe'
-Benchmark 1: .\256color.exe
-  Time (mean ± σ):      29.0 ms ±   2.7 ms    [User: 8.4 ms, System: 17.2 ms]
-  Range (min … max):    25.8 ms …  40.6 ms    41 runs
+$ hyperfine --warmup 100 '256color'
+Benchmark 1: 256color
+  Time (mean ± σ):      11.3 ms ±   0.4 ms    [User: 4.9 ms, System: 9.3 ms]
+  Range (min … max):    10.7 ms …  12.7 ms    130 runs
 ```
 
 * truecolor example
@@ -136,11 +136,19 @@ Benchmark 1: .\256color.exe
 ![truecolor](images/truecolor.png)
 
 ```
-❯ hyperfine.exe --warmup 100 '.\truecolor.exe'
-Benchmark 1: .\truecolor.exe
-  Time (mean ± σ):      28.5 ms ±   1.2 ms    [User: 7.9 ms, System: 17.8 ms]
-  Range (min … max):    26.9 ms …  32.5 ms    51 runs
+$ hyperfine --warmup 100 'truecolor'
+Benchmark 1: truecolor
+  Time (mean ± σ):      11.2 ms ±   0.5 ms    [User: 5.4 ms, System: 9.2 ms]
+  Range (min … max):    10.4 ms …  13.0 ms    131 runs
 ```
+## Status
+
+ ### Escape codes available
+
+|Finnished | Type|
+|- | -|
+|x | Color Escape Codes|
+| | Screen and Cursor Escape Codes|
 
 ## References
 
