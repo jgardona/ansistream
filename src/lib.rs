@@ -27,6 +27,48 @@
 //! |48;2;r;g;b | background color (RGB, non-standard)|
 //! |90-97 | bright foreground color (non-standard)|
 //! |100-107 | bright background color (non-standard)|
+//! 
+//! ## Examples
+//! 
+//! * Write FC_RED attribute to stream
+//! 
+//! ```
+//! use ansistream::{FC_RED, AnsiEscapeStream};
+//! 
+//! let mut astream = AnsiEscapeStream::default();
+//! astream.write_attribute(FC_RED).unwrap();
+//! // fcred escape code
+//! let vec = astream.get_ref();
+//! assert_eq!(&[0x1b, 0x5b, 0x33, 0x31, 0x6d], vec.as_slice());
+//! ```
+//! 
+//! * Reset an attribute in stream
+//! 
+//! ```
+//! use ansistream::{FC_RED, AnsiEscapeStream};
+//! 
+//! let mut astream = AnsiEscapeStream::default();
+//! astream.reset_attribute(FC_RED).unwrap();
+//! // fcred escape code
+//! let vec = astream.get_ref();
+//! assert_eq!(&[0x1b, 0x5b, 0x33, 0x39, 0x6d], vec.as_slice());
+//! ```
+//! 
+//! * Write formatted foreground green color text to stream.
+//! 
+//! ```
+//! use ansistream::{FC_GREEN, AnsiEscapeStream};
+//! 
+//! let mut astream = AnsiEscapeStream::default();
+//! astream
+//!     .write_text_fc_fmt(FC_GREEN, format_args!("123"))
+//!     .unwrap();
+//! // asserts that fcred was writed and also reseted with fcdefault
+//! assert_eq!(
+//!     &[0x1b, 0x5b, 0x33, 0x32, 0x6d, 0x31, 0x32, 0x33, 0x1b, 0x5b, 0x33, 0x39, 0x6d],
+//!     astream.get_ref().as_slice()
+//! ); 
+//! ```
 
 use std::{
     fmt::{self, Arguments},
@@ -108,7 +150,7 @@ pub struct AnsiEscapeStream {
 
 impl AnsiEscapeStream {
     /// Initializes an AnsiEscapeStream.\
-    /// capacity is a unsigned number used to preallocate the internal buffer.
+    /// capacity is an unsigned number used to preallocate the internal buffer.
     pub fn new(capacity: usize) -> Self {
         Self {
             buffer: Cursor::new(Vec::<u8>::with_capacity(capacity)),
@@ -134,8 +176,8 @@ impl AnsiEscapeStream {
         Ok(())
     }
 
-    /// Reset an attribute of type. If the attribute is a foreground color, then
-    /// reset it to the default foreground color.
+    /// Reset an attribute of type(FC, BC, TS). If the attribute is a foreground color, then
+    /// reset it to the default foreground color, and so on.
     pub fn reset_attribute(&mut self, attr: u16) -> io::Result<()> {
         match attr {
             TS_BOLD => self.write_attribute(TS_NO_BOLD)?,
@@ -175,6 +217,22 @@ impl AnsiEscapeStream {
     }
 
     /// Write a 16 formatted foreground color text to stream. The attribute is reseted at the end of operation.
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// use ansistream::{FC_GREEN, AnsiEscapeStream};
+    ///         
+    /// let mut astream = AnsiEscapeStream::default();
+    /// astream
+    ///   .write_text_fc_fmt(FC_GREEN, format_args!("123"))
+    ///   .unwrap();
+    /// // asserts that fgreen was writed and also reseted with fcdefault
+    /// assert_eq!(
+    ///     &[0x1b, 0x5b, 0x33, 0x32, 0x6d, 0x31, 0x32, 0x33, 0x1b, 0x5b, 0x33, 0x39, 0x6d],
+    ///     astream.get_ref().as_slice()
+    /// );
+    /// ```
     pub fn write_text_fc_fmt(&mut self, color: u16, fmt: fmt::Arguments<'_>) -> io::Result<()> {
         match color {
             40..=47 | 100..=107 => {
@@ -193,6 +251,23 @@ impl AnsiEscapeStream {
     }
 
     /// Write a 16 formatted background color text to stream. The attribute is reseted at the end of operation.
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// use ansistream::{BC_GREEN, AnsiEscapeStream};
+    /// 
+    /// let mut astream = AnsiEscapeStream::default();
+    /// astream
+    ///     .write_text_bc_fmt(BC_GREEN, format_args!("123"))
+    ///     .unwrap();
+    /// // asserts that bcgreen was writed and also reseted with bcdefault
+    /// assert_eq!(
+    ///     &[0x1b, 0x5b, 0x34, 0x32, 0x6d, 0x31, 0x32, 0x33, 0x1b, 0x5b, 0x34, 0x39, 0x6d],
+    ///     astream.get_ref().as_slice()
+    /// );
+    /// 
+    /// ```
     pub fn write_text_bc_fmt(&mut self, color: u16, fmt: Arguments<'_>) -> io::Result<()> {
         match color {
             30..=37 | 90..=97 => {
@@ -228,7 +303,7 @@ impl AnsiEscapeStream {
         Ok(())
     }
 
-    /// Write 16 foregournd and background color formatted text to stream.
+    /// Write 16 foreground and background color formatted text to stream.
     /// Only the codes from foreground and background are reset.
     pub fn write_text_color_fmt(
         &mut self,
