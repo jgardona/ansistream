@@ -61,46 +61,41 @@ $ cargo add ansistream
 * Initialize a buffer and write a simple string in it
 
 ```rust
-// initialize an internal buffer with 30 bytes
-let mut astream = ansistream::AnsiScapeStream::new(30);
+// initialize a ansi stream
+let output = Cursor::new(Vec::<u8>::new());
+let mut astream = ansistream::AnsiScapeStream::new(output);
 // write a simple string in buffer
 astream.write_string("the quick brown fox jumps over the lazy dog")?;
+// data will be flushed when astream drop or gets flushed
 ```
 
 * Write the stream in stdout
 
 ```rust
-fn flush<R: Read + Seek, W: Write>(reader: &mut R, writer: &mut) -> io::Result<()> {
-    reader.seek(SeekFrom::Start(0))?;
-    io::copy(reader, writer)?;
-    reader.seek(SeekFrom::Start(0))?;
+let stdout = io::stdout().lock();
 
-    Ok(())
-}
-
-let mut stdout = io::stdout().lock();
-
+let mut astream = ansistream::AnsiScapeStream::new(stdout);
 astream.write_string("simple text")?;
-// AnsiScapeStream impl DerefMut
-flush(&mut *astream, &mut stdout)?;
+
+astream.flush()?;
 ```
 
 * Writing a green foreground text to stream
 
 ```rust
-let mut astream = AnsiEscapeStream::default();
+let mut astream = AnsiEscapeStream::new(writer);
 astream.write_text_fc_fmt(FCGREEN, format_args!("123")).unwrap();
 // asserts that fcgreen was writed and also reseted with fcdefault
 assert_eq!(
     &[0x1b, 0x5b, 0x33, 0x32, 0x6d, 0x31, 0x32, 0x33, 0x1b, 0x5b, 0x33, 0x39, 0x6d],
-    astream.get_ref().as_slice()
+    astream.buffer()
 );
 ```
 
 * Write formatted color output
 
 ```rust
-let mut astream = AnsiEscapeStream::default();
+let mut astream = AnsiEscapeStream::new(writer);
 
   for i in 100..=107 {
       astream.write_text_color_fmt(FC_LIGHT_GRAY, i, format_args!("{i:>5} "))?;

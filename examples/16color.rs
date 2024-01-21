@@ -1,16 +1,9 @@
-use std::io::{Read, Seek, SeekFrom, Write};
+use std::io::Write;
 
 use ansistream::*;
 
-fn flush<T: Read + Seek, W: Write>(reader: &mut T, writer: &mut W) -> std::io::Result<()> {
-    reader.seek(SeekFrom::Start(0))?;
-    std::io::copy(reader, writer)?;
-    reader.seek(SeekFrom::Start(0))?;
-    Ok(())
-}
-
 fn main() -> std::io::Result<()> {
-    let mut astream = ansistream::AnsiEscapeStream::default();
+    let mut astream = ansistream::AnsiEscapeStream::new(std::io::stdout().lock());
 
     astream.write_string("Printing 16 color to stdout\n\n")?;
 
@@ -21,10 +14,6 @@ fn main() -> std::io::Result<()> {
     for i in 100..=107 {
         astream.write_text_color_fmt(FC_LIGHT_GRAY, i, format_args!("{i:>5} "))?;
     }
-
-    let mut stdout = std::io::stdout().lock();
-
-    flush(&mut *astream, &mut stdout)?;
 
     Ok(())
 }

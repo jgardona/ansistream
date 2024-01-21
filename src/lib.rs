@@ -27,52 +27,56 @@
 //! |48;2;r;g;b | background color (RGB, non-standard)|
 //! |90-97 | bright foreground color (non-standard)|
 //! |100-107 | bright background color (non-standard)|
-//! 
+//!
 //! ## Examples
-//! 
+//!
 //! * Write FC_RED attribute to stream
-//! 
+//!
 //! ```
 //! use ansistream::{FC_RED, AnsiEscapeStream};
+//! use std::io::Cursor;
 //! 
-//! let mut astream = AnsiEscapeStream::default();
+//! let buffer = Cursor::new(Vec::<u8>::new());
+//! let mut astream = AnsiEscapeStream::new(buffer);
 //! astream.write_attribute(FC_RED).unwrap();
 //! // fcred escape code
-//! let vec = astream.get_ref();
-//! assert_eq!(&[0x1b, 0x5b, 0x33, 0x31, 0x6d], vec.as_slice());
+//! assert_eq!(&[0x1b, 0x5b, 0x33, 0x31, 0x6d], astream.buffer());
 //! ```
-//! 
+//!
 //! * Reset an attribute in stream
-//! 
+//!
 //! ```
 //! use ansistream::{FC_RED, AnsiEscapeStream};
-//! 
-//! let mut astream = AnsiEscapeStream::default();
+//! use std::io::Cursor;
+//!
+//! let buffer = Cursor::new(Vec::<u8>::new());
+//! let mut astream = AnsiEscapeStream::new(buffer);
 //! astream.reset_attribute(FC_RED).unwrap();
 //! // fcred escape code
-//! let vec = astream.get_ref();
-//! assert_eq!(&[0x1b, 0x5b, 0x33, 0x39, 0x6d], vec.as_slice());
+//! assert_eq!(&[0x1b, 0x5b, 0x33, 0x39, 0x6d], astream.buffer());
 //! ```
-//! 
+//!
 //! * Write formatted foreground green color text to stream.
-//! 
+//!
 //! ```
 //! use ansistream::{FC_GREEN, AnsiEscapeStream};
-//! 
-//! let mut astream = AnsiEscapeStream::default();
+//! use std::io::Cursor;
+//!
+//! let buffer = Cursor::new(Vec::<u8>::new());
+//! let mut astream = AnsiEscapeStream::new(buffer);
 //! astream
 //!     .write_text_fc_fmt(FC_GREEN, format_args!("123"))
 //!     .unwrap();
 //! // asserts that fcred was writed and also reseted with fcdefault
 //! assert_eq!(
 //!     &[0x1b, 0x5b, 0x33, 0x32, 0x6d, 0x31, 0x32, 0x33, 0x1b, 0x5b, 0x33, 0x39, 0x6d],
-//!     astream.get_ref().as_slice()
-//! ); 
+//!     astream.buffer()
+//! );
 //! ```
 
 use std::{
     fmt::{self, Arguments},
-    io::{self, Cursor, Write},
+    io::{self, BufWriter, Write},
     ops::{Deref, DerefMut},
 };
 
@@ -143,31 +147,31 @@ pub const BC_WHITE: u16 = 107;
 /// Data structure used to do fast ansi escape write operations.
 /// It implements many methods and traits which makes easier to format text.
 /// An internal buffer can be preallocated, which avoids allocation using write operations.
-#[derive(Debug, Default)]
-pub struct AnsiEscapeStream {
-    buffer: Cursor<Vec<u8>>,
+#[derive(Debug)]
+pub struct AnsiEscapeStream<W: Write> {
+    buffer: BufWriter<W>,
 }
 
-impl AnsiEscapeStream {
+impl<W: Write> AnsiEscapeStream<W> {
     /// Initializes an AnsiEscapeStream.\
-    /// capacity is an unsigned number used to preallocate the internal buffer.
-    pub fn new(capacity: usize) -> Self {
+    /// writer is any struct which can implement Write trait.
+    pub fn new(writer: W) -> Self {
         Self {
-            buffer: Cursor::new(Vec::<u8>::with_capacity(capacity)),
+            buffer: BufWriter::new(writer),
         }
     }
 
     /// Clear the internal buffer.\
     /// The buffer position is updated to 0, and all data is cleared. The capacity remains the same.
-    pub fn clear(&mut self) {
-        self.buffer.set_position(0);
-        self.buffer.get_mut().clear();
-    }
+    // pub fn clear(&mut self) {
+    //     self.buffer.set_position(0);
+    //     self.buffer.get_mut().clear();
+    // }
 
-    /// Set the internal buffer position to 0.
-    pub fn reset(&mut self) {
-        self.buffer.set_position(0);
-    }
+    // /// Set the internal buffer position to 0.
+    // pub fn reset(&mut self) {
+    //     self.buffer.set_position(0);
+    // }
 
     /// Reset all ansi escape code attributes before this buffer position using ESC[0m.
     pub fn reset_all_attributes(&mut self) -> io::Result<()> {
@@ -217,20 +221,22 @@ impl AnsiEscapeStream {
     }
 
     /// Write a 16 formatted foreground color text to stream. The attribute is reseted at the end of operation.
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// use ansistream::{FC_GREEN, AnsiEscapeStream};
+    /// use std::io::Cursor;
     ///         
-    /// let mut astream = AnsiEscapeStream::default();
+    /// let buffer = Cursor::new(Vec::<u8>::new());
+    /// let mut astream = AnsiEscapeStream::new(buffer);
     /// astream
     ///   .write_text_fc_fmt(FC_GREEN, format_args!("123"))
     ///   .unwrap();
     /// // asserts that fgreen was writed and also reseted with fcdefault
     /// assert_eq!(
     ///     &[0x1b, 0x5b, 0x33, 0x32, 0x6d, 0x31, 0x32, 0x33, 0x1b, 0x5b, 0x33, 0x39, 0x6d],
-    ///     astream.get_ref().as_slice()
+    ///     astream.buffer()
     /// );
     /// ```
     pub fn write_text_fc_fmt(&mut self, color: u16, fmt: fmt::Arguments<'_>) -> io::Result<()> {
@@ -251,22 +257,24 @@ impl AnsiEscapeStream {
     }
 
     /// Write a 16 formatted background color text to stream. The attribute is reseted at the end of operation.
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// use ansistream::{BC_GREEN, AnsiEscapeStream};
-    /// 
-    /// let mut astream = AnsiEscapeStream::default();
+    /// use std::io::Cursor;
+    ///
+    /// let buffer = Cursor::new(Vec::<u8>::new());
+    /// let mut astream = AnsiEscapeStream::new(buffer);
     /// astream
     ///     .write_text_bc_fmt(BC_GREEN, format_args!("123"))
     ///     .unwrap();
     /// // asserts that bcgreen was writed and also reseted with bcdefault
     /// assert_eq!(
     ///     &[0x1b, 0x5b, 0x34, 0x32, 0x6d, 0x31, 0x32, 0x33, 0x1b, 0x5b, 0x34, 0x39, 0x6d],
-    ///     astream.get_ref().as_slice()
+    ///     astream.buffer()
     /// );
-    /// 
+    ///
     /// ```
     pub fn write_text_bc_fmt(&mut self, color: u16, fmt: Arguments<'_>) -> io::Result<()> {
         match color {
@@ -410,33 +418,33 @@ impl AnsiEscapeStream {
     }
 }
 
-impl Deref for AnsiEscapeStream {
-    type Target = Cursor<Vec<u8>>;
+impl<W: Write> Deref for AnsiEscapeStream<W> {
+    type Target = BufWriter<W>;
 
     fn deref(&self) -> &Self::Target {
         &self.buffer
     }
 }
 
-impl DerefMut for AnsiEscapeStream {
+impl<W: Write> DerefMut for AnsiEscapeStream<W> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.buffer
     }
 }
 
-impl<T> AsMut<T> for AnsiEscapeStream
+impl<T, W: Write> AsMut<T> for AnsiEscapeStream<W>
 where
-    <AnsiEscapeStream as Deref>::Target: AsMut<T>,
+    <AnsiEscapeStream<W> as Deref>::Target: AsMut<T>,
 {
     fn as_mut(&mut self) -> &mut T {
         self.deref_mut().as_mut()
     }
 }
 
-impl<T> AsRef<T> for AnsiEscapeStream
+impl<T, W: Write> AsRef<T> for AnsiEscapeStream<W>
 where
     T: ?Sized,
-    <AnsiEscapeStream as Deref>::Target: AsRef<T>,
+    <AnsiEscapeStream<W> as Deref>::Target: AsRef<T>,
 {
     fn as_ref(&self) -> &T {
         self.deref().as_ref()
@@ -445,82 +453,78 @@ where
 
 #[cfg(test)]
 mod tests {
+    use std::io::{Cursor, Write};
+
     use super::*;
 
     #[test]
     fn test_write_bytes() {
         // write bytes to stream using byte string literal aka. b.
-        let mut astream = AnsiEscapeStream::new(5);
+        let c = Cursor::new(Vec::<u8>::new());
+        let mut astream = AnsiEscapeStream::new(c);
         astream.write(b"abcde").unwrap();
 
-        let result = String::from_utf8_lossy(astream.buffer.get_ref());
+        let result = String::from_utf8_lossy(astream.buffer());
         assert_eq!("abcde", result);
 
-        // reset stream
-        astream.reset();
-
         // write byes to stream using an array
+        let c = Cursor::new(Vec::<u8>::new());
+        let mut astream = AnsiEscapeStream::new(c);
         let arr = [1, 2, 3, 4, 5];
         astream.write(&arr).unwrap();
-        let vec = astream.buffer.get_ref();
-        assert_eq!(&arr, vec.as_slice());
+        let vec = astream.buffer();
+        assert_eq!(&arr, vec);
 
-        // reset stream
-        astream.reset();
-
-        // write a vector to stream
+        // // write a vector to stream
+        let c = Cursor::new(Vec::<u8>::new());
+        let mut astream = AnsiEscapeStream::new(c);
         let vec = vec![1, 2, 3, 4, 5];
         astream.write(&vec).unwrap();
-        assert_eq!(&vec, astream.buffer.get_ref());
+        assert_eq!(&vec, astream.buffer());
     }
 
     #[test]
     fn test_write_attribute_function() {
-        let mut astream = AnsiEscapeStream::default();
+        let c = Cursor::new(Vec::<u8>::new());
+        let mut astream = AnsiEscapeStream::new(c);
         astream.write_attribute(FC_RED).unwrap();
         // fcred escape code
-        let vec = astream.get_ref();
-        assert_eq!(&[0x1b, 0x5b, 0x33, 0x31, 0x6d], vec.as_slice());
+        let vec = astream.buffer();
+        assert_eq!(&[0x1b, 0x5b, 0x33, 0x31, 0x6d], vec);
     }
 
     #[test]
     fn test_reset_attibute_function() {
-        let mut astream = AnsiEscapeStream::default();
+        let c = Cursor::new(Vec::<u8>::new());
+        let mut astream = AnsiEscapeStream::new(c);
         astream.reset_attribute(FC_RED).unwrap();
         // fcred escape code
-        let vec = astream.get_ref();
-        assert_eq!(&[0x1b, 0x5b, 0x33, 0x39, 0x6d], vec.as_slice());
+        let vec = astream.buffer();
+        assert_eq!(&[0x1b, 0x5b, 0x33, 0x39, 0x6d], vec);
     }
 
     #[test]
     fn test_drefmut_implementation() {
-        let mut astream = AnsiEscapeStream::default();
-        astream.write_attribute(FC_RED).unwrap();
-        let mut output = Cursor::new(Vec::<u8>::new());
-        astream.reset();
-        std::io::copy(&mut *astream, &mut output).unwrap();
-        assert_eq!(&[0x1b, 0x5b, 0x33, 0x31, 0x6d], output.get_ref().as_slice());
-
-        // test writing with writln! macro
-        astream.clear();
-        writeln!(&mut *astream).unwrap();
-        assert_eq!(&[0x0a], astream.get_ref().as_slice());
+        let c = Cursor::new(Vec::<u8>::new());
+        let mut astream = AnsiEscapeStream::new(c);
+        write!(&mut *astream, " ").unwrap();
+        assert_eq!(&[0x20], astream.buffer());
     }
 
     #[test]
     fn test_write_text_fc_fmt_function() {
-        let mut astream = AnsiEscapeStream::default();
+        let c = Cursor::new(Vec::<u8>::new());
+        let mut astream = AnsiEscapeStream::new(c);
         astream
             .write_text_fc_fmt(FC_GREEN, format_args!("123"))
             .unwrap();
         // asserts that fcred was writed and also reseted with fcdefault
         assert_eq!(
             &[0x1b, 0x5b, 0x33, 0x32, 0x6d, 0x31, 0x32, 0x33, 0x1b, 0x5b, 0x33, 0x39, 0x6d],
-            astream.get_ref().as_slice()
+            astream.buffer()
         );
 
-        astream.reset();
-        astream.get_mut().clear();
+        astream.flush().unwrap();
 
         // asserts that if we use a background color, write_text_color will convert it to foreground color
         astream
@@ -528,24 +532,24 @@ mod tests {
             .unwrap();
         assert_eq!(
             &[0x1b, 0x5b, 0x39, 0x33, 0x6d, 0x31, 0x32, 0x33, 0x1b, 0x5b, 0x33, 0x39, 0x6d],
-            astream.get_ref().as_slice()
+            astream.buffer()
         )
     }
 
     #[test]
     fn test_write_text_bc_fmt_function() {
-        let mut astream = AnsiEscapeStream::default();
+        let c = Cursor::new(Vec::<u8>::new());
+        let mut astream = AnsiEscapeStream::new(c);
         astream
             .write_text_bc_fmt(BC_GREEN, format_args!("123"))
             .unwrap();
         // asserts that bcgreen was writed and also reseted with bcdefault
         assert_eq!(
             &[0x1b, 0x5b, 0x34, 0x32, 0x6d, 0x31, 0x32, 0x33, 0x1b, 0x5b, 0x34, 0x39, 0x6d],
-            astream.get_ref().as_slice()
+            astream.buffer()
         );
 
-        astream.reset();
-        astream.get_mut().clear();
+        astream.flush().unwrap();
 
         // asserts that if we use a foreground color, write_text_bc will convert it to background color
         astream
@@ -553,23 +557,24 @@ mod tests {
             .unwrap();
         assert_eq!(
             &[0x1b, 0x5b, 0x31, 0x30, 0x33, 0x6d, 0x31, 0x32, 0x33, 0x1b, 0x5b, 0x34, 0x39, 0x6d],
-            astream.get_ref().as_slice()
+            astream.buffer()
         )
     }
 
     #[test]
     fn test_write_text_color_function() {
         // test not reset scenario
-        let mut astream = AnsiEscapeStream::default();
+        let c = Cursor::new(Vec::<u8>::new());
+        let mut astream = AnsiEscapeStream::new(c);
         astream
             .write_text_color(FC_MAGENTA, BC_DARK_GRAY, "")
             .unwrap();
         assert_eq!(
             &[0x1b, 0x5b, 0x33, 0x35, 0x3b, 0x31, 0x30, 0x30, 0x6d],
-            astream.get_ref().as_slice()
+            astream.buffer()
         );
 
-        astream.reset();
+        astream.flush().unwrap();
         // test reset all scenario
         astream
             .write_text_color(FC_MAGENTA, BC_DARK_GRAY, "012")
@@ -579,20 +584,21 @@ mod tests {
                 0x1b, 0x5b, 0x33, 0x35, 0x3b, 0x31, 0x30, 0x30, 0x6d, 0x30, 0x31, 0x32, 0x1b, 0x5b,
                 0x33, 0x39, 0x6d, 0x1b, 0x5b, 0x34, 0x39, 0x6d
             ],
-            astream.get_ref().as_slice()
+            astream.buffer()
         );
     }
 
     #[test]
     fn test_write_text_fc256_function() {
         // test not reseting scenario
-        let mut astream = AnsiEscapeStream::default();
+        let c = Cursor::new(Vec::<u8>::new());
+        let mut astream = AnsiEscapeStream::new(c);
         astream.write_text_fc256(FC_BLUE, "").unwrap();
         assert_eq!(
             &[0x1b, 0x5b, 0x33, 0x38, 0x3b, 0x35, 0x3b, 0x33, 0x34, 0x6d],
-            astream.get_ref().as_slice()
+            astream.buffer()
         );
-        astream.reset();
+        astream.flush().unwrap();
 
         // test reseting scenario
         astream.write_text_fc256(FC_BLUE, "012").unwrap();
@@ -601,20 +607,21 @@ mod tests {
                 0x1b, 0x5b, 0x33, 0x38, 0x3b, 0x35, 0x3b, 0x33, 0x34, 0x6d, 0x30, 0x31, 0x32, 0x1b,
                 0x5b, 0x33, 0x39, 0x6d
             ],
-            astream.get_ref().as_slice()
+            astream.buffer()
         );
     }
 
     #[test]
     fn test_write_text_bc256_function() {
         // test not reseting scenario
-        let mut astream = AnsiEscapeStream::default();
+        let c = Cursor::new(Vec::<u8>::new());
+        let mut astream = AnsiEscapeStream::new(c);
         astream.write_text_bc256(BC_BLUE, "").unwrap();
         assert_eq!(
             &[0x1b, 0x5b, 0x34, 0x38, 0x3b, 0x35, 0x3b, 0x34, 0x34, 0x6d],
-            astream.get_ref().as_slice()
+            astream.buffer()
         );
-        astream.reset();
+        astream.flush().unwrap();
 
         // test reseting scenario
         astream.write_text_bc256(BC_BLUE, "012").unwrap();
@@ -623,23 +630,24 @@ mod tests {
                 0x1b, 0x5b, 0x34, 0x38, 0x3b, 0x35, 0x3b, 0x34, 0x34, 0x6d, 0x30, 0x31, 0x32, 0x1b,
                 0x5b, 0x34, 0x39, 0x6d
             ],
-            astream.get_ref().as_slice()
+            astream.buffer()
         );
     }
 
     #[test]
     fn test_write_text_fcrgb() {
         // test not reseting scenario
-        let mut astream = AnsiEscapeStream::default();
+        let c = Cursor::new(Vec::<u8>::new());
+        let mut astream = AnsiEscapeStream::new(c);
         astream.write_text_fcrgb(255, 255, 255, "").unwrap();
         assert_eq!(
             &[
                 27, 91, 0x33, 0x38, 59, 0x32, 59, 0x32, 0x35, 0x35, 59, 0x32, 0x35, 0x35, 59, 0x32,
                 0x35, 0x35, 109
             ],
-            astream.get_ref().as_slice()
+            astream.buffer()
         );
-        astream.reset();
+        astream.flush().unwrap();
 
         // test reseting scenario
         astream.write_text_fcrgb(255, 255, 255, "012").unwrap();
@@ -648,23 +656,24 @@ mod tests {
                 27, 91, 0x33, 0x38, 59, 0x32, 59, 0x32, 0x35, 0x35, 59, 0x32, 0x35, 0x35, 59, 0x32,
                 0x35, 0x35, 109, 0x30, 0x31, 0x32, 27, 91, 0x33, 0x39, 109
             ],
-            astream.get_ref().as_slice()
+            astream.buffer()
         );
     }
 
     #[test]
     fn test_write_text_bcrgb() {
         // test not reseting scenario
-        let mut astream = AnsiEscapeStream::default();
+        let c = Cursor::new(Vec::<u8>::new());
+        let mut astream = AnsiEscapeStream::new(c);
         astream.write_text_bcrgb(255, 255, 255, "").unwrap();
         assert_eq!(
             &[
                 27, 91, 0x34, 0x38, 59, 0x32, 59, 0x32, 0x35, 0x35, 59, 0x32, 0x35, 0x35, 59, 0x32,
                 0x35, 0x35, 109
             ],
-            astream.get_ref().as_slice()
+            astream.buffer()
         );
-        astream.reset();
+        astream.flush().unwrap();
 
         // test reseting scenario
         astream.write_text_bcrgb(255, 255, 255, "012").unwrap();
@@ -673,13 +682,14 @@ mod tests {
                 27, 91, 0x34, 0x38, 59, 0x32, 59, 0x32, 0x35, 0x35, 59, 0x32, 0x35, 0x35, 59, 0x32,
                 0x35, 0x35, 109, 0x30, 0x31, 0x32, 27, 91, 0x34, 0x39, 109
             ],
-            astream.get_ref().as_slice()
+            astream.buffer()
         );
     }
 
     #[test]
     fn test_write_text_color_fmt() {
-        let mut astream = AnsiEscapeStream::default();
+        let c = Cursor::new(Vec::<u8>::new());
+        let mut astream = AnsiEscapeStream::new(c);
 
         // test reset all scenario
         astream
@@ -690,13 +700,14 @@ mod tests {
                 0x1b, 0x5b, 0x33, 0x35, 0x3b, 0x31, 0x30, 0x30, 0x6d, 0x30, 0x31, 0x32, 0x1b, 0x5b,
                 0x33, 0x39, 0x6d, 0x1b, 0x5b, 0x34, 0x39, 0x6d
             ],
-            astream.get_ref().as_slice()
+            astream.buffer()
         );
     }
 
     #[test]
     fn test_write_text_fc256_fmt() {
-        let mut astream = AnsiEscapeStream::default();
+        let c = Cursor::new(Vec::<u8>::new());
+        let mut astream = AnsiEscapeStream::new(c);
 
         // test reseting scenario
         astream
@@ -707,13 +718,14 @@ mod tests {
                 0x1b, 0x5b, 0x33, 0x38, 0x3b, 0x35, 0x3b, 0x33, 0x34, 0x6d, 0x30, 0x31, 0x32, 0x1b,
                 0x5b, 0x33, 0x39, 0x6d
             ],
-            astream.get_ref().as_slice()
+            astream.buffer()
         );
     }
 
     #[test]
     fn test_write_text_bc256_fmt() {
-        let mut astream = AnsiEscapeStream::default();
+        let c = Cursor::new(Vec::<u8>::new());
+        let mut astream = AnsiEscapeStream::new(c);
 
         // test reseting scenario
         astream
@@ -724,13 +736,14 @@ mod tests {
                 0x1b, 0x5b, 0x34, 0x38, 0x3b, 0x35, 0x3b, 0x34, 0x34, 0x6d, 0x30, 0x31, 0x32, 0x1b,
                 0x5b, 0x34, 0x39, 0x6d
             ],
-            astream.get_ref().as_slice()
+            astream.buffer()
         );
     }
 
     #[test]
     fn test_write_text_fcrgb_fmt() {
-        let mut astream = AnsiEscapeStream::default();
+        let c = Cursor::new(Vec::<u8>::new());
+        let mut astream = AnsiEscapeStream::new(c);
 
         // test reseting scenario
         astream
@@ -741,13 +754,14 @@ mod tests {
                 27, 91, 0x33, 0x38, 59, 0x32, 59, 0x32, 0x35, 0x35, 59, 0x32, 0x35, 0x35, 59, 0x32,
                 0x35, 0x35, 109, 0x30, 0x31, 0x32, 27, 91, 0x33, 0x39, 109
             ],
-            astream.get_ref().as_slice()
+            astream.buffer()
         );
     }
 
     #[test]
     fn test_write_text_bcrgb_fmt() {
-        let mut astream = AnsiEscapeStream::default();
+        let c = Cursor::new(Vec::<u8>::new());
+        let mut astream = AnsiEscapeStream::new(c);
 
         // test reseting scenario
         astream
@@ -758,7 +772,7 @@ mod tests {
                 27, 91, 0x34, 0x38, 59, 0x32, 59, 0x32, 0x35, 0x35, 59, 0x32, 0x35, 0x35, 59, 0x32,
                 0x35, 0x35, 109, 0x30, 0x31, 0x32, 27, 91, 0x34, 0x39, 109
             ],
-            astream.get_ref().as_slice()
+            astream.buffer()
         );
     }
 }
