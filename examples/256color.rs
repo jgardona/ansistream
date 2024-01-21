@@ -1,20 +1,10 @@
-use std::{
-    io::Write,
-    io::{Read, Seek},
-};
 
 use ansistream::{FC_BLACK, FC_WHITE};
-
-fn flush<R: Read + Seek, W: Write>(reader: &mut R, writer: &mut W) -> std::io::Result<()> {
-    reader.seek(std::io::SeekFrom::Start(0))?;
-    std::io::copy(reader, writer)?;
-    reader.seek(std::io::SeekFrom::Start(0))?;
-    Ok(())
-}
-
+use std::io::Write;
 fn main() -> std::io::Result<()> {
-    let mut astream = ansistream::AnsiEscapeStream::default();
-    let mut stdout = std::io::stdout().lock();
+    let mut astream = ansistream::AnsiEscapeStream::new(
+        std::io::stdout().lock()
+    );
 
     astream.write_string("Printing 256 color(16 bit) table\n\n")?;
     astream.write_string("Printing standard and extended colors:\n\n")?;
@@ -61,7 +51,6 @@ fn main() -> std::io::Result<()> {
         astream.write_attribute(fg)?;
         astream.write_text_bc256_fmt(ie, format_args!("{ie:<4}"))?;
     }
-    flush(&mut *astream, &mut stdout)?;
 
     Ok(())
 }

@@ -1,17 +1,10 @@
 use std::{
     fs,
-    io::{self, Read, Seek, Write},
+    io::{self, Write},
 };
 
-fn flush_stdout<W: Read + Seek>(reader: &mut W) -> io::Result<()> {
-    let mut stdout = io::stdout().lock();
-    reader.seek(io::SeekFrom::Start(0))?;
-    io::copy(reader, &mut stdout)?;
-    Ok(())
-}
-
 fn main() -> io::Result<()> {
-    let mut astream = ansistream::AnsiEscapeStream::new(2000);
+    let mut astream = ansistream::AnsiEscapeStream::new(std::io::stdout().lock());
     let text = fs::read_to_string("tests/data/vmpoetry.txt")?;
     text.chars().for_each(|c| {
         if c.is_alphabetic() {
@@ -22,6 +15,5 @@ fn main() -> io::Result<()> {
             write!(*astream, "{c}").unwrap();
         }
     });
-    flush_stdout(&mut *astream)?;
     Ok(())
 }

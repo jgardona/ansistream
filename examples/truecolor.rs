@@ -1,13 +1,7 @@
-use std::io::{self, Read, Seek, Write};
+use std::io;
+use std::io::Write;
 
 use ansistream::FC_DARK_GRAY;
-
-fn flush_stdout<W: Read + Seek>(reader: &mut W) -> io::Result<()> {
-    let mut stdout = io::stdout().lock();
-    reader.seek(io::SeekFrom::Start(0))?;
-    io::copy(reader, &mut stdout)?;
-    Ok(())
-}
 
 fn hex2rgb(hex: u32) -> (u16, u16, u16) {
     let r = (hex >> 16) as u16;
@@ -18,7 +12,7 @@ fn hex2rgb(hex: u32) -> (u16, u16, u16) {
 }
 
 fn main() -> io::Result<()> {
-    let mut astream = ansistream::AnsiEscapeStream::new(2000);
+    let mut astream = ansistream::AnsiEscapeStream::new(io::stdout().lock());
 
     let palettes: [u32; 50] = [
         0xf1c15d, 0x85a746, 0x599a70, 0xe56a4b, 0xeda052, 0xb3d9e2, 0xb3b4ac, 0xfefacb, 0x78495d,
@@ -46,6 +40,5 @@ fn main() -> io::Result<()> {
 
     astream.reset_all_attributes()?;
 
-    flush_stdout(&mut *astream)?;
     Ok(())
 }
